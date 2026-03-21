@@ -8,7 +8,7 @@ without hardcoded paths.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 import os
 
 # yaml is optional - only needed if loading from YAML files
@@ -67,7 +67,7 @@ class DataPaths:
         return Path(expanded)
     
     @classmethod
-    def from_yaml(cls, config_path: Path | str) -> 'DataPaths':
+    def from_yaml(cls, config_path: Union[Path, str]) -> 'DataPaths':
         """
         Load paths from a YAML configuration file.
         
@@ -183,12 +183,14 @@ class GeneratorConfig:
     missing value handling and semantic filtering.
     """
     # Missing value configuration
+    # NOTE: "Don't know" is a VALID response (respondent has no opinion) - do NOT exclude it
     missing_value_labels: List[str] = field(default_factory=lambda: [
-        'Missing', 'No answer', 'Refused', 'Not applicable'
+        'Missing', 'No answer', 'Refused', 'Not applicable', 'Not asked'
     ])
     missing_value_patterns: List[str] = field(default_factory=lambda: [
-        'not asked', "don't know", 'missing', 'refused', 'nan', 'na',
-        'not available', 'no response'
+        'not asked', 'missing', 'refused', 'nan', 'na',
+        'not available', 'no response', 'not applicable'
+        # NOTE: "don't know" is intentionally NOT in this list - it's a valid response
     ])
     
     # Semantic similarity filtering
@@ -197,7 +199,7 @@ class GeneratorConfig:
     similarity_threshold: float = 0.7
     
     @classmethod
-    def from_yaml(cls, config_path: Path | str) -> 'GeneratorConfig':
+    def from_yaml(cls, config_path: Union[Path, str]) -> 'GeneratorConfig':
         """Load generator config from YAML file."""
         if not YAML_AVAILABLE:
             raise ImportError("Loading from YAML requires pyyaml.")
@@ -211,11 +213,12 @@ class GeneratorConfig:
         return cls(
             missing_value_labels=gen_cfg.get(
                 'missing_value_labels', 
-                ['Missing', 'No answer', 'Refused', 'Not applicable']
+                ['Missing', 'No answer', 'Refused', 'Not applicable', 'Not asked']
             ),
             missing_value_patterns=gen_cfg.get(
                 'missing_value_patterns',
-                ['not asked', "don't know", 'missing', 'refused', 'nan', 'na']
+                ['not asked', 'missing', 'refused', 'nan', 'na', 'not applicable']
+                # NOTE: "don't know" is intentionally NOT included - it's a valid response
             ),
             use_semantic_filtering=gen_cfg.get('use_semantic_filtering', True),
             similarity_model=gen_cfg.get('similarity_model', 'all-MiniLM-L6-v2'),
@@ -247,7 +250,7 @@ class DatasetConfig:
     surveys: Optional[List[str]] = None
     
     @classmethod
-    def from_yaml(cls, config_path: Path | str) -> 'DatasetConfig':
+    def from_yaml(cls, config_path: Union[Path, str]) -> 'DatasetConfig':
         """Load dataset config from YAML file."""
         if not YAML_AVAILABLE:
             raise ImportError("Loading from YAML requires pyyaml.")
@@ -274,7 +277,7 @@ class DatasetConfig:
         return f"s{self.n_sections}m{self.m_features_per_section}"
 
 
-def load_config(config_path: Path | str) -> Dict[str, Any]:
+def load_config(config_path: Union[Path, str]) -> Dict[str, Any]:
     """
     Load a complete configuration file and return all config objects.
     
